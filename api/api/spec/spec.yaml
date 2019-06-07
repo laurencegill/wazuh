@@ -3082,8 +3082,8 @@ tags:
   - name: syscollector
     description: 'Capability to collect interesting information for each agent'
 
-security:
-   - jwt: []
+#security:
+#   - jwt: []
 
 paths:
   /:
