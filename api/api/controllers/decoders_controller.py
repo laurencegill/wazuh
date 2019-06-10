@@ -11,14 +11,12 @@ from api.models.base_model_ import Data
 from api.util import remove_nones_to_dict, exception_handler, parse_api_param, raise_if_exc
 from wazuh.cluster.dapi.dapi import DistributedAPI
 from wazuh.decoder import Decoder
-from wazuh.rbac import matches_privileges
 
 loop = asyncio.get_event_loop()
 logger = logging.getLogger('wazuh')
 
 
 @exception_handler
-@matches_privileges(actions=['decoder:get'], resources='decoder:name:*')
 def get_decoders(pretty: bool = False, wait_for_complete: bool = False, offset: int = 0, limit: int = None,
                  sort: str = None, search: str = None, file: str = None, path: str = None,
                  status: str = None):
@@ -56,7 +54,6 @@ def get_decoders(pretty: bool = False, wait_for_complete: bool = False, offset: 
 
 
 @exception_handler
-@matches_privileges(actions=['decoder:get'], resources='decoder:name:{decoder_name}')
 def get_decoders_by_name(pretty: bool = False, wait_for_complete: bool = False, offset: int = 0, limit: int = None,
                          sort: str = None, search: str = None, decoder_name=None):
     """Get decoders by name
