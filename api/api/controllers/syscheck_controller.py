@@ -6,7 +6,6 @@ import asyncio
 import logging
 
 import connexion
-import dateutil.parser
 
 import wazuh.syscheck as syscheck
 from api.models.base_model_ import Data
@@ -26,7 +25,34 @@ def put_syscheck(pretty=False, wait_for_complete=False):
     :param wait_for_complete: Disable timeout response 
     :type wait_for_complete: bool
     """
-    f_kwargs = {'all_agents': True}
+    f_kwargs = {'auth': connexion.request.headers['Authorization']}
+
+    dapi = DistributedAPI(f=syscheck.run_all,
+                          f_kwargs=remove_nones_to_dict(f_kwargs),
+                          request_type='distributed_master',
+                          is_async=False,
+                          wait_for_complete=wait_for_complete,
+                          pretty=pretty,
+                          logger=logger,
+                          )
+    data = raise_if_exc(loop.run_until_complete(dapi.distribute_function()))
+
+    return data, 200
+
+
+@exception_handler
+def put_syscheck_agent(agent_id, pretty=False, wait_for_complete=False):
+    """
+
+    :param pretty: Show results in human-readable format
+    :type pretty: bool
+    :param wait_for_complete: Disable timeout response
+    :type wait_for_complete: bool
+    :param agent_id: Agent ID
+    :type agent_id: str
+    """
+    f_kwargs = {'agent_id': agent_id,
+                'auth': connexion.request.headers['Authorization']}
 
     dapi = DistributedAPI(f=syscheck.run,
                           f_kwargs=remove_nones_to_dict(f_kwargs),
@@ -98,32 +124,6 @@ def get_syscheck_agent(agent_id, pretty=False, wait_for_complete=False, offset=0
     response = Data(data)
 
     return response, 200
-
-
-@exception_handler
-def put_syscheck_agent(agent_id, pretty=False, wait_for_complete=False):
-    """
-
-    :param pretty: Show results in human-readable format 
-    :type pretty: bool
-    :param wait_for_complete: Disable timeout response 
-    :type wait_for_complete: bool
-    :param agent_id: Agent ID
-    :type agent_id: str
-    """
-    f_kwargs = {'agent_id': agent_id}
-
-    dapi = DistributedAPI(f=syscheck.run,
-                          f_kwargs=remove_nones_to_dict(f_kwargs),
-                          request_type='distributed_master',
-                          is_async=False,
-                          wait_for_complete=wait_for_complete,
-                          pretty=pretty,
-                          logger=logger
-                          )
-    data = raise_if_exc(loop.run_until_complete(dapi.distribute_function()))
-
-    return data, 200
 
 
 @exception_handler
