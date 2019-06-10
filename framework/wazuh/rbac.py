@@ -3,19 +3,15 @@
 # This program is a free software; you can redistribute it and/or modify it under the terms of GPLv2
 
 from functools import wraps
-from wazuh.exception import WazuhError, WazuhInternalError
+from wazuh.exception import WazuhError
 from api.authentication import decode_token
-from connexion import request
 import re
 
 
-def get_user_permissions():
-
-    # We obtain Authorization header information from incoming connexion request
-    auth_h = request.headers['Authorization']
+def get_user_permissions(**kwargs):
 
     # We strip "Bearer " from the Authorization header of the request to get the token
-    jwt_token = auth_h[7:]
+    jwt_token = kwargs['auth'][7:]
 
     payload = decode_token(jwt_token)
 
@@ -92,10 +88,11 @@ def matches_privileges(actions: list = None, resources: str = None):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            mode, user_permissions = get_user_permissions()
+            mode, user_permissions = get_user_permissions(**kwargs)
             required_permissions = get_required_permissions(actions, resources, *args, **kwargs)
             allow = match_pairs(mode, user_permissions, required_permissions)
             if allow:
+                del kwargs['auth']
                 return func(*args, **kwargs)
             else:
                 raise WazuhError(4000)
