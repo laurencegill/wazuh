@@ -12,30 +12,19 @@ from wazuh.ossec_queue import OssecQueue
 from wazuh import common, Connection
 from datetime import datetime
 from wazuh.wdb import WazuhDBConnection
+from wazuh.rbac import matches_privileges
 
 
-def run(agent_id=None, all_agents=False):
+@matches_privileges(actions=['syscheck:put'], resources='agent:id:{agent_id}')
+def run(agent_id=None):
     """
     Runs rootcheck and syscheck.
 
-    :param agent_id: Run rootcheck/syscheck in the agent.
-    :param all_agents: Run rootcheck/syscheck in all agents.
+    :param agent_id: Run rootcheck/syscheck in an agent.
     :return: Message.
     """
-
-    if agent_id == "000" or all_agents:
-
-        SYSCHECK_RESTART = "{0}/var/run/.syscheck_run".format(common.ossec_path)
-
-        fp = open(SYSCHECK_RESTART, 'w')
-        fp.write('{0}\n'.format(SYSCHECK_RESTART))
-        fp.close()
-        ret_msg = "Restarting Syscheck/Rootcheck locally"
-
-        if all_agents:
-            oq = OssecQueue(common.ARQUEUE)
-            ret_msg = oq.send_msg_to_agent(OssecQueue.HC_SK_RESTART)
-            oq.close()
+    if agent_id == '000':
+        ret_msg = _run_local()
     else:
         # Check if agent exists
         agent_info = Agent(agent_id).get_basic_information()
@@ -46,11 +35,45 @@ def run(agent_id=None, all_agents=False):
         if agent_status.lower() != 'active':
             raise WazuhInternalError(1601, extra_message='{0} - {1}'.format(agent_id, agent_status))
 
+        # Run scan in agent
         oq = OssecQueue(common.ARQUEUE)
         ret_msg = oq.send_msg_to_agent(OssecQueue.HC_SK_RESTART, agent_id)
         oq.close()
 
     return ret_msg
+
+
+@matches_privileges(actions=['syscheck:put'], resources='agent:id:PACO')
+def run_all():
+    """
+    Runs syscheck/rootcheck in all agents
+
+    :return: Message.
+    """
+    # Run scan in agent 000
+    _run_local()
+
+    # Run scan in all agents
+    oq = OssecQueue(common.ARQUEUE)
+    ret_msg = oq.send_msg_to_agent(OssecQueue.HC_SK_RESTART)
+    oq.close()
+
+    return ret_msg
+
+
+def _run_local():
+    """
+    Runs syscheck/rootcheck in agent 000 (local)
+
+    :return: Message.
+    """
+    SYSCHECK_RESTART = "{0}/var/run/.syscheck_run".format(common.ossec_path)
+
+    fp = open(SYSCHECK_RESTART, 'w')
+    fp.write('{0}\n'.format(SYSCHECK_RESTART))
+    fp.close()
+
+    return "Restarting Syscheck/Rootcheck locally"
 
 
 def clear(agent_id=None, all_agents=False):
