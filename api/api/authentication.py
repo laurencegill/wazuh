@@ -155,8 +155,13 @@ def generate_token(user_id):
     # Dummy rbac_policies for testing
     rbac_policies = [
         {
-            "actions": ["decoder:get"],
-            "resources": ["decoder:name:windows_fields", "decoder:name:*"],
+            "actions": ["syscheck:put"],
+            "resources": ["agent:id:*"],
+            "effect": "allow"
+        },
+        {
+            "actions": ["syscheck:put"],
+            "resources": ["agent:id:000"],
             "effect": "allow"
         }
     ]
