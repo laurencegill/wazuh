@@ -4,23 +4,24 @@
 # Created by Wazuh, Inc. <info@wazuh.com>.
 # This program is a free software; you can redistribute it and/or modify it under the terms of GPLv2
 
+from datetime import datetime
 from glob import glob
 from operator import itemgetter
-from wazuh.exception import WazuhException, WazuhInternalError, WazuhError
-from wazuh.agent import Agent
-from wazuh.ossec_queue import OssecQueue
+
 from wazuh import common, Connection
-from datetime import datetime
-from wazuh.wdb import WazuhDBConnection
+from wazuh.agent import Agent
+from wazuh.exception import WazuhInternalError, WazuhError
+from wazuh.ossec_queue import OssecQueue
 from wazuh.rbac import matches_privileges
+from wazuh.wdb import WazuhDBConnection
 
 
 @matches_privileges(actions=['syscheck:put'], resources='agent:id:{agent_id}')
 def run(agent_id=None):
     """
-    Runs rootcheck and syscheck.
+    Runs rootcheck and syscheck in an agent
 
-    :param agent_id: Run rootcheck/syscheck in an agent.
+    :param agent_id: Agent ID.
     :return: Message.
     """
     if agent_id == '000':
@@ -33,7 +34,8 @@ def run(agent_id=None):
         else:
             agent_status = "N/A"
         if agent_status.lower() != 'active':
-            raise WazuhInternalError(1601, extra_message='{0} - {1}'.format(agent_id, agent_status))
+            raise WazuhInternalError(1601,
+                                     extra_message='{0} - {1}'.format(agent_id, agent_status))
 
         # Run scan in agent
         oq = OssecQueue(common.ARQUEUE)
@@ -43,13 +45,14 @@ def run(agent_id=None):
     return ret_msg
 
 
-@matches_privileges(actions=['syscheck:put'], resources='agent:id:PACO')
+@matches_privileges(actions=['syscheck:put'], resources='agent:id:*')
 def run_all():
     """
     Runs syscheck/rootcheck in all agents
 
     :return: Message.
     """
+
     # Run scan in agent 000
     _run_local()
 
@@ -76,28 +79,54 @@ def _run_local():
     return "Restarting Syscheck/Rootcheck locally"
 
 
-def clear(agent_id=None, all_agents=False):
+@matches_privileges(actions=['syscheck:delete'], resources='agent:id:{agent_id}')
+def clear(agent_id=None):
     """
-    Clears the database.
+    Clears the syscheck database of the agent.
 
-    :param agent_id: For an agent.
-    :param all_agents: For all agents.
+    :param agent_id: Agent ID.
     :return: Message.
     """
-    agents = [agent_id] if not all_agents else map(itemgetter('id'), Agent.get_agents_overview(select=['id'])['items'])
+
+    return _clear(agent_id)
+
+
+@matches_privileges(actions=['syscheck:delete'], resources='agent:id:*')
+def clear_all():
+    """
+    Clears the syscheck database of all agents.
+
+    :return: Message.
+    """
+    agents = map(itemgetter('id'), Agent.get_agents_overview(select=['id'])['items'])
+
+    for agent in agents:
+        _clear(agent)
+
+    return "Syscheck databases deleted"
+
+
+def _clear(agent):
+    """
+    Clears the syscheck database of an agent.
+
+    :return: Message.
+    """
+    Agent(agent).get_basic_information()  # check if the agent exists
 
     wdb_conn = WazuhDBConnection()
-    for agent in agents:
-        Agent(agent).get_basic_information()  # check if the agent exists
-        wdb_conn.execute("agent {} sql delete from fim_entry".format(agent), delete=True)
-        # update key fields which contains keys to value 000
-        wdb_conn.execute("agent {} sql update metadata set value = '000' where key like 'fim_db%'".format(agent), update=True)
-        wdb_conn.execute("agent {} sql update metadata set value = '000' where key = 'syscheck-db-completed'".format(agent), update=True)
+    wdb_conn.execute("agent {} sql delete from fim_entry".format(agent), delete=True)
+    # update key fields which contains keys to value 000
+    wdb_conn.execute("agent {} sql update metadata set value = '000' where key like 'fim_db%'"
+                     .format(agent), update=True)
+    wdb_conn.execute("agent {} sql update metadata set value = '000' where key = 'syscheck-db-completed'"
+                     .format(agent), update=True)
 
     return "Syscheck database deleted"
 
 
-def last_scan(agent_id):
+@matches_privileges(actions=['syscheck:get'], resources='agent:id:{agent_id}')
+def last_scan(agent_id=None):
     """
     Gets the last scan of the agent.
 
@@ -115,7 +144,8 @@ def last_scan(agent_id):
     if agent_version < 'Wazuh v3.7.0':
         db_agent = glob('{0}/{1}-*.db'.format(common.database_path_agents, agent_id))
         if not db_agent:
-            raise WazuhInternalError(1600, extra_message=agent_id)
+            raise WazuhInternalError(1600,
+                                     extra_message=agent_id)
         else:
             db_agent = db_agent[0]
         conn = Connection(db_agent)
@@ -129,11 +159,14 @@ def last_scan(agent_id):
                                                           filters={'module': 'fim'})[0]
         end = None if not fim_scan_info['end_scan'] else datetime.fromtimestamp(float(fim_scan_info['end_scan']))
         start = None if not fim_scan_info['start_scan'] else datetime.fromtimestamp(float(fim_scan_info['start_scan']))
-        # if start is 'ND', end will be as well.
-        return {'start': start, 'end': None if start is None else end}
+
+        # if start is None or the scan is running, end is None
+        return {'start': start, 'end': None if start is None or start > end else end}
 
 
-def files(agent_id=None, summary=False, offset=0, limit=common.database_limit, sort=None, search=None, select=None, filters={}):
+@matches_privileges(actions=['syscheck:get'], resources='agent:id:{agent_id}')
+def files(agent_id=None, summary=False, offset=0, limit=common.database_limit, sort=None, search=None, select=None,
+          filters={}):
     """
     Return a list of files from the database that match the filters
 
@@ -144,6 +177,7 @@ def files(agent_id=None, summary=False, offset=0, limit=common.database_limit, s
     :param limit: Maximum number of items to return.
     :param sort: Sorts the items. Format: {"fields":["field1","field2"],"order":"asc|desc"}.
     :param search: Looks for items with the specified string.
+    :param select: Selects which fields to return.
     :return: Dictionary: {'items': array of items, 'totalItems': Number of items (without applying the limit)}
     """
     parameters = {"date", "mtime", "file", "size", "perm", "uname", "gname", "md5", "sha1", "sha256", "inode", "gid",
@@ -153,7 +187,8 @@ def files(agent_id=None, summary=False, offset=0, limit=common.database_limit, s
     if sort is not None:
         for element in sort['fields']:
             if element not in parameters:
-                raise WazuhError(1403, extra_message=', '.join(set(sort['fields']) - parameters),
+                raise WazuhError(1403,
+                                 extra_message=', '.join(set(sort['fields']) - parameters),
                                  extra_remediation="Allowed fields are: {0}".format(', '.join(parameters)))
 
     if select is None:
@@ -161,7 +196,8 @@ def files(agent_id=None, summary=False, offset=0, limit=common.database_limit, s
     else:
         select = set(select)
         if not select.issubset(parameters):
-            raise WazuhError(1724,extra_message=', '.join(select - parameters),
+            raise WazuhError(1724,
+                             extra_message=', '.join(select - parameters),
                              extra_remediation="Allowed fields are: {0}".format(', '.join(parameters)))
 
     if 'hash' in filters:
@@ -170,13 +206,13 @@ def files(agent_id=None, summary=False, offset=0, limit=common.database_limit, s
     else:
         or_filters = {}
 
-    items, totalItems = Agent(agent_id)._load_info_from_agent_db(table='fim_entry', select=select, offset=offset, limit=limit,
-                                                        sort=sort, search=search, filters=filters, count=True,
-                                                        or_filters=or_filters)
+    items, total_items = Agent(agent_id)._load_info_from_agent_db(table='fim_entry', select=select, offset=offset,
+                                                                  limit=limit, sort=sort, search=search,
+                                                                  filters=filters, count=True, or_filters=or_filters)
     for date_field in select & {'mtime', 'date'}:
         for item in items:
             # date fields with value 0 are returned as ND
             item[date_field] = "ND" if item[date_field] == 0 \
                                     else datetime.fromtimestamp(float(item[date_field]))
 
-    return {'totalItems': totalItems, 'items': items}
+    return {'totalItems': total_items, 'items': items}
