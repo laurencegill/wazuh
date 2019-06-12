@@ -24,36 +24,54 @@ class WazuhException(Exception):
         1002: 'Error executing command',
         1003: 'Command output not in json',
         1004: 'Malformed command output ',
-        1005: 'Error reading file',
-        1006: 'File/directory does not exist',
+        1005: {'message': 'Error reading file',
+               'remediation': 'Please make sure that the permissions are correct'
+               },
+        1006: {'message': 'File/directory does not exist',
+               'remediation': 'Please make sure the path is correct'
+               },
         1010: 'Unable to connect to queue',
         1011: 'Error communicating with queue',
         1012: 'Invalid message to queue',
-        1013: 'Unable to connect with socket',
-        1014: 'Error communicating with socket',
+        1013: {'message': 'Unable to connect with socket',
+               'remediation': 'Please check your internet connection and try again'
+               },
+        1014: {'message': 'Error communicating with socket',
+               'remediation': 'Please check your internet connection and try again'
+               },
         1015: 'Error agent version is null. Was the agent ever connected?',
         1016: 'Error moving file',
-        1017: 'Wazuh is restarting',
+        1017: {'message: Destination route not found',
+               'remediation: Please check the permissions on the route and try again'},
         1018: 'Wazuh is stopped. Start Wazuh before using the API.',
         1019: 'There is a failed process. Review that before using the API.',
 
         # Configuration: 1100 - 1199
         1100: 'Error checking configuration',
-        1101: 'Requested component does not exist',
-        1102: 'Invalid section',
-        1103: 'Invalid field in section',
+        1101: {'message': 'Error getting configuration',
+               'remediation': 'Please, check your configuration file and try again'
+               },
+        1102: {'message: Invalid section'
+               'remediation: Please check that all sections of the configuration file are correct'},
+        1103: {'message: Invalid field in section'
+               'remediation: Please check the configuration and try again'},
         1104: 'Invalid type',
         1105: 'Error reading API configuration',
-        1106: 'Requested section not present in configuration',
-        1107: 'Internal options file not found',
-        1108: 'Value not found in internal_options.conf',
+        1106: {'message: Requested section not present in configuration'
+               'remediation: Please check the desired section in the configuration file'},
+        1107: {'message: Internal options file not found'
+               'remediation: Check that the file internal_options.conf exists'},
+        1108: {'message: Value not found in internal_options.conf'
+               'remediation: Check the values in your internal_options.conf file'},
         1109: 'Option must be a digit',
         1110: 'Option value is out of the limits',
         1111: "Remote group file updates are only available in 'agent.conf' file",
         1112: "Empty files aren't supported",
         1113: "XML syntax error",
         1114: "Wazuh syntax error",
-        1115: "Error executing verify-agent-conf",
+        1115: {'message': 'Error executing verify-agent-conf',
+               'remediation': 'Please, check your configuration file and try again'
+               },
         1116: "Requested component configuration does not exist",
         1117: "Unable to connect with component. The component might be disabled.",
         1118: "Could not request component configuration",
@@ -87,7 +105,9 @@ class WazuhException(Exception):
                },
 
         # Stats: 1300 - 1399
-        1307: 'Invalid parameters',
+        1307: {'message': 'Invalid parameters',
+               'remediation': 'Please, check that the update is correct, there is a problem in reading the results, contact us at [official repository](https://github.com/wazuh/wazuh/issues)'
+               },
         1308: 'Stats file has not been created yet',
         1309: 'Statistics file damaged',
 
@@ -99,8 +119,12 @@ class WazuhException(Exception):
                'remediation': 'Please, use only allowed sort fields'
                },
         1404: 'A field must be specified to order the data',
-        1405: 'Specified limit exceeds maximum allowed (1000)',
-        1406: '0 is not a valid limit',
+        1405: {'message': 'Specified limit exceeds maximum allowed',
+               'remediation': 'Please select a limit between 1 and 1000'
+               },
+        1406: {'message': '0 is not a valid limit',
+               'remediation': 'Please select a limit between 1 and 1000'
+               },
         1407: 'query does not match expected format',
         1408: 'Field does not exist.',
         1409: 'Invalid query operator.',
@@ -152,52 +176,118 @@ class WazuhException(Exception):
 
         # Agents: 1700 - 1799
         1700: 'Bad arguments. Accepted arguments: [id] or [name and ip]',
-        1701: 'Agent does not exist',
-        1702: 'Unable to restart agent(s)',
-        1703: 'Action not available for Manager (Agent 000)',
-        1704: 'Unable to load requested info from agent db',
-        1705: 'There is an agent with the same name',
-        1706: 'There is an agent with the same IP',
-        1707: 'Impossible to restart agent due to it is not active',
-        1708: 'There is an agent with the same ID',
-        1709: 'Too short key size (<64)',
-        1710: 'The group does not exist',
-        1711: 'The group already exists',
-        1712: 'Default group is not removable',
-        1713: 'Error accessing repository',
-        1714: 'Error downloading WPK file',
-        1715: 'Error sending WPK file',
-        1716: 'Error upgrading agent',
-        1717: 'Cannot upgrade to a version higher than the manager',
-        1718: 'Version not available',
-        1719: 'Remote upgrade is not available for this agent version',
-        1720: 'Agent disconnected',
-        1721: 'Remote upgrade is not available for this agent OS version',
-        1722: 'Incorrect format for group_id. Characters supported  a-z, A-Z, 0-9, ., _ and -. Max length is 255',
-        1723: 'Hash algorithm not available',
-        1724: {'message': 'Not a valid select field ',
-               'remediation': 'Please, use only allowed select fields'
+        1701: {'message': 'Agent does not exist',
+               'remediation': 'Please, make the following call to find all available agents `curl -u foo:bar -X GET "http://localhost:55000/agents?select=id,name"`'
                },
-        1725: 'Error registering a new agent',
-        1726: 'Ossec authd is not running',
-        1727: 'Error listing group files',
-        1728: {'message': 'Invalid node type',
-               'remediation': 'Valid types are "master" and "worker"'},
-        1729: 'Agent status not valid. Valid statuses are Active, Disconnected, Pending and Never Connected.',
-        1730: {'message': 'Node does not exist',
-               'remediation': 'Make sure the name is correct and that the node is up. You can check it using '
-                              '[`cluster_control -l`](https://documentation.wazuh.com/current/user-manual/reference/tools/cluster_control.html#get-connected-nodes)'},
-        1731: 'Agent is not eligible for removal',
-        1732: 'No agents selected',
+        1702: {'message': 'Unable to restart agent(s)',
+               'remediation': 'Please make sure the agent exists and is active and is not the manager'
+               },
+        1703: {'message': 'Action not available for Manager (Agent 000)',
+               'remediation': 'Please, make the following call to find all available agents `curl -u foo:bar -X GET "http://localhost:55000/agents?select=id,name"`, and ensure you select an agent other than 000'
+               },
+        1704: 'Unable to load requested info from agent db',
+        1705: {'message': 'There is an agent with the same name',
+               'remediation': 'Please choose another name'
+               },
+        1706: {'message': 'There is an agent with the same IP or the IP is invalid',
+               'remediation': 'Please choose another IP'
+               },
+        1707: {'message': 'Impossible to restart agent due to it is not active',
+               'remediation': 'First activate the agent so you can restart it'
+               },
+        1708: {'message': 'There is an agent with the same ID',
+               'remediation': 'Please choose another ID'
+               },
+        1709: {'message': 'Too short key size',
+               'remediation': 'The necessary size for the key is (<64)'
+               },
+        1710: {'message': 'The group does not exist',
+               'remediation': 'Please, make the following call to find all available groups `curl -u foo:bar -X GET "http://localhost:55000/agents/groups"`'
+               },
+        1711: {'message': 'The group already exists',
+               'remediation': 'Please, another group ID'
+               },
+        1712: {'message': 'Default group is not removable',
+               'remediation': 'Please, visit [official documentation](https://documentation.wazuh.com/3.x/user-manual/agents/grouping-agents.html)'
+                              'to get more information'
+               },
+        1713: {'message': 'Error accessing repository',
+               'remediation': 'Please check your internet connection and try again'
+               },
+        1714: {'message': 'Error downloading WPK file',
+               'remediation': 'Please check your internet connection and try again'
+               },
+        1715: {'message': 'Error sending WPK file',
+               'remediation': 'Please check your internet connection and that the agent is active'
+               },
+        1716: {'message': 'Error upgrading agent',
+               'remediation': 'Please check that it is a new version and try again'
+               },
+        1717: {'message': 'Cannot upgrade to a version higher than the manager',
+               'remediation': 'The agent cannot have a more recent version than the manager, please update the manager first'
+               },
+        1718: {'message': 'Version not available',
+               'remediation': 'Please check the version again or check our repository at [official repository](https://github.com/wazuh/wazuh)'
+               },
+        1719: {'message': 'Remote upgrade is not available for this agent version',
+               'remediation': 'Please, follow this for agent upgrading: [official documentation](https://documentation.wazuh.com/3.x/user-manual/agents/remote-upgrading/upgrading-agent.html)'
+               },
+        1720: {'message': 'Agent disconnected',
+               'remediation': 'Please make sure the agent is active'
+               },
+        1721: {'message': 'Remote upgrade is not available for this agent OS version',
+               'remediation': 'Sorry the remote update is not available for your OS'
+               },
+        1722: {'message': 'Incorrect format for group_id',
+               'remediation': 'Characters supported  a-z, A-Z, 0-9, ., _ and -. Max length is 255'
+               },
+        1723: 'Hash algorithm not available',
+        1724: 'Not a valid select field',
+        1725: {'message': 'Error registering a new agent',
+               'remediation': 'Please check all data and try again'
+               },
+        1726: {'message': 'Ossec authd is not running',
+               'remediation': 'Please, visit our documentation to get more information: [official documentation](https://documentation.wazuh.com/current/user-manual/agents/registering-agents/register-agent-authd.html)'
+               },
+        1727: {'message': 'Error listing group files',
+               'remediation': 'Please, use this request: GET /agents/groups/:group_id/files to get the group files and verify what is the problem'
+               },
+        1728: 'Invalid node type',
+        1729: {'message': 'Agent status not valid. Valid statuses are Active, Disconnected, Pending and Never Connected',
+               'remediation': 'Please check the entered status and try again.'
+               },
+        1730: 'Node does not exist',
+        1731: {'message': 'Agent is not eligible for removal',
+               'remediation': 'Please check the status of the agent and verify that it is not the master [official documentation](https://documentation.wazuh.com/3.x/user-manual/agents/restful-api/remove.html)'
+               },
+        1732: {'message': 'No agents selected',
+               'remediation': 'Please select an agent or the operation cannot be performed'
+               },
         1733: 'Bad formatted version. Version must follow this pattern: vX.Y.Z .',
-        1734: 'Agent does not belong to the specified group',
-        1735: 'Agent version is not compatible with this feature',
-        1736: 'Error getting all groups',
-        1737: 'Maximum number of groups per multigroup is 256',
-        1738: 'Agent name is too long. Max length allowed for agent name is 128',
-        1739: "Error getting agent's group sync",
-        1740: 'Action only available for active agents',
-        1741: 'Could not remove multigroup',
+        1734: {'message': 'Error unsetting agent group',
+               'remediation': 'Agent does not belong to any group, to add the agent to a group follow: [official documentation](https://documentation.wazuh.com/3.x/user-manual/agents/grouping-agents.html)'
+               },
+        1735: {'message': 'Agent version is not compatible with this feature',
+               'remediation': 'Please update the agent, in case the problem persists, contact us at: [official repository](https://github.com/wazuh/wazuh/issues)'
+               },
+        1736: {'message': 'Error getting all groups',
+               'remediation': 'Please, use this request: GET /agents/groups to get all groups and verify what is the problem'
+               },
+        1737: {'message': 'Maximum number of groups per multigroup is 256',
+               'remediation': 'Please choose another group or remove an agent from the target group'
+               },
+        1738: {'message': 'Agent name is too long',
+               'remediation': 'Max length allowed for agent name is 128'
+               },
+        1739: {'message': 'Error getting agents group sync',
+               'remediation': 'Please check that the agent and the group are correctly created [official documentation](https://documentation.wazuh.com/3.x/user-manual/agents/command-line/register.html)'
+               },
+        1740: {'message': 'Action only available for active agents',
+               'remediation': 'Please activate the agent to be able to synchronize'
+               },
+        1741: {'message': 'Could not remove multigroup',
+               'remediation': 'Cannot remove multigroup'
+               },
         1742: 'Error running XML syntax validator',
         1743: 'Error running Wazuh syntax validator',
         1744: 'Invalid chunk size',
@@ -205,6 +295,9 @@ class WazuhException(Exception):
         1746: "Could not parse current client.keys file",
         1747: "Could not remove agent group assigment from database",
         1748: "Could not remove agent files",
+        1749: {'message': 'No parameters provided for request',
+               'remediation': 'Please, visit our documentation to get more information'
+               },
 
         # CDB List: 1800 - 1899
         1800: 'Bad format in CDB list {path}',
@@ -309,7 +402,7 @@ class WazuhException(Exception):
         self._cmd_error = cmd_error
         self._dapi_errors = {} if dapi_errors is None else deepcopy(dapi_errors)
 
-        error_details = self.ERRORS[self._code]
+        error_details = self.ERRORS[self._code] if not cmd_error else extra_message
         if isinstance(error_details, dict):
             code_message, code_remediation = error_details.get('message', ''), error_details.get('remediation', None)
         else:
@@ -326,7 +419,7 @@ class WazuhException(Exception):
         else:
             self._message = extra_message
 
-        self._remediation = code_remediation if extra_remediation is None else f"{code_remediation}. {extra_remediation}"
+        self._remediation = code_remediation if extra_remediation is None else f"{code_remediation}: {extra_remediation}"
 
     def __str__(self):
         return "Error {0} - {1}".format(self._code, self._message)
