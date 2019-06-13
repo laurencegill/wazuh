@@ -98,6 +98,12 @@ class Connection:
         """
         return self.__cur.fetchone()
 
+    def fetch_all(self):
+        """
+        Return all tuples
+        """
+        return self.__cur.fetchall()
+
     def vacuum(self):
         """
         Rebuild the entire database: reduce size and defragment
