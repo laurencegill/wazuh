@@ -3,8 +3,30 @@
 # This program is a free software; you can redistribute it and/or modify it under the terms of GPLv2
 
 from functools import wraps
-from wazuh.exception import WazuhError
+from wazuh.exception import WazuhError, WazuhInternalError
 import re
+from wazuh.database import Connection
+from glob import glob
+from wazuh import common
+
+
+def get_groups_resources(agent_id):
+    db_global = glob(common.database_path_global)
+    if not db_global:
+        raise WazuhInternalError(1600)
+
+    conn = Connection(db_global[0])
+    if agent_id == '*':
+        conn.execute("SELECT name FROM `group` WHERE id IN (SELECT DISTINCT id_group FROM belongs)")
+    else:
+        conn.execute("SELECT name FROM `group` WHERE id IN (SELECT id_group FROM belongs WHERE id_agent = :agent_id)",
+                     {'agent_id': int(agent_id)})
+    result = conn.fetch_all()
+    groups = ['agent:group:*']
+    for group in result:
+        groups.append('{0}:{1}'.format('agent:group', group[0]))
+
+    return groups
 
 
 def get_required_permissions(actions: list = None, resources: str = None, **kwargs):
@@ -54,9 +76,15 @@ def match_permissions(req_permissions: dict = None, rbac: list = None):
                 action_match = req_action in policy['actions']
                 if action_match:
                     # We find resource name to add * if not already there
-                    m = re.search(r'^(\w+\:\w+:)(\w+)$', req_resource)
+                    m = re.search(r'^(\w+\:\w+:)(\w+|\*)$', req_resource)
+                    res_match = False
                     # We find if resource matches
-                    if m is not None:
+                    if m.group(1) == 'agent:id:':
+                        reqs = [req_resource]
+                        reqs.extend(get_groups_resources(m.group(2)))
+                        for req in reqs:
+                            res_match = res_match or (req in policy['resources'])
+                    elif m.group(2) != '*':
                         req_asterisk = '{0}{1}'.format(m.group(1), '*')
                         res_match = (req_resource in policy['resources']) or (req_asterisk in policy['resources'])
                     else:
