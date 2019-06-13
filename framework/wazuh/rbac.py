@@ -4,24 +4,10 @@
 
 from functools import wraps
 from wazuh.exception import WazuhError
-from api.authentication import decode_token
 import re
 
 
-def get_user_permissions(**kwargs):
-
-    # We strip "Bearer " from the Authorization header of the request to get the token
-    jwt_token = kwargs['auth'][7:]
-
-    payload = decode_token(jwt_token)
-
-    permissions = payload['rbac_policies']
-    mode = payload['mode']
-
-    return mode, permissions
-
-
-def get_required_permissions(actions: list = None, resources: str = None, *args, **kwargs):
+def get_required_permissions(actions: list = None, resources: str = None, **kwargs):
 
     # We expose required resources for the request
     m = re.search(r'^(\w+\:\w+:)(\w+|\*|{(\w+)})$', resources)
@@ -53,24 +39,26 @@ def get_required_permissions(actions: list = None, resources: str = None, *args,
     return req_permissions
 
 
-def match_pairs(mode: bool = False, user_permissions: list = None, req_permissions: dict = None):
+def match_permissions(req_permissions: dict = None, rbac: list = None):
 
+    mode = rbac[0]
+    user_permissions = rbac[1]
     # We run through all required permissions for the request
     for req_action, req_resources in req_permissions.items():
-        # allow_match is used to keep track when a required permission is matched by a policy with an allowed effect
-        allow_match = False
-        # We run through the user permissions to find a match with the required permissions
-        for policy in user_permissions:
-            # We find if action matches
-            action_match = req_action in policy['actions']
-            if action_match:
-                for req_resource in req_resources:
+        for req_resource in req_resources:
+            # allow_match is used to keep track when a required permission is matched by a policy with an allowed effect
+            allow_match = False
+            # We run through the user permissions to find a match with the required permissions
+            for policy in user_permissions:
+                # We find if action matches
+                action_match = req_action in policy['actions']
+                if action_match:
                     # We find resource name to add * if not already there
                     m = re.search(r'^(\w+\:\w+:)(\w+)$', req_resource)
                     # We find if resource matches
                     if m is not None:
                         req_asterisk = '{0}{1}'.format(m.group(1), '*')
-                        res_match = (req_resource or req_asterisk) in policy['resources']
+                        res_match = (req_resource in policy['resources']) or (req_asterisk in policy['resources'])
                     else:
                         res_match = req_resource in policy['resources']
                     # When any policy with a deny effect matches, we deny the request directly
@@ -81,10 +69,9 @@ def match_pairs(mode: bool = False, user_permissions: list = None, req_permissio
                     elif res_match and policy['effect'] == "allow":
                         allow_match = True
                         break
-            # We continue running through the user permissions if no match is found in actual policy
-        # If we are using white list mode and no match is found for the required permission we deny the request.
-        if not allow_match and not mode:
-            return False
+            # If we are using white list mode and no match is found for the required permission we deny the request.
+            if not allow_match and not mode:
+                return False
     # If we don't find a deny match or we find an allow match for all policies in white list mode we allow the request
     return True
 
@@ -93,11 +80,11 @@ def matches_privileges(actions: list = None, resources: str = None):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            mode, user_permissions = get_user_permissions(**kwargs)
-            required_permissions = get_required_permissions(actions, resources, *args, **kwargs)
-            allow = match_pairs(mode, user_permissions, required_permissions)
+            req_permissions = get_required_permissions(actions=actions, resources=resources, **kwargs)
+            allow = match_permissions(req_permissions=req_permissions,
+                                      rbac=kwargs['rbac'])
             if allow:
-                del kwargs['auth']
+                del kwargs['rbac']
                 return func(*args, **kwargs)
             else:
                 raise WazuhError(4000)
