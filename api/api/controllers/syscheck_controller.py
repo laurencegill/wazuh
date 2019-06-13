@@ -11,6 +11,8 @@ import wazuh.syscheck as syscheck
 from api.models.base_model_ import Data
 from api.util import remove_nones_to_dict, exception_handler, parse_api_param, raise_if_exc
 from wazuh.cluster.dapi.dapi import DistributedAPI
+from api.authentication import get_permissions
+
 
 loop = asyncio.get_event_loop()
 logger = logging.getLogger('wazuh')
@@ -25,7 +27,8 @@ def put_syscheck(pretty=False, wait_for_complete=False):
     :param wait_for_complete: Disable timeout response 
     :type wait_for_complete: bool
     """
-    f_kwargs = {'auth': connexion.request.headers['Authorization']}
+    rbac = get_permissions(connexion.request.headers['Authorization'])
+    f_kwargs = {'rbac': rbac}
 
     dapi = DistributedAPI(f=syscheck.run_all,
                           f_kwargs=remove_nones_to_dict(f_kwargs),
@@ -51,7 +54,8 @@ def put_syscheck_agent(agent_id, pretty=False, wait_for_complete=False):
     :param agent_id: Agent ID
     :type agent_id: str
     """
-    f_kwargs = {'agent_id': agent_id, 'auth': connexion.request.headers['Authorization']}
+    rbac = get_permissions(connexion.request.headers['Authorization'])
+    f_kwargs = {'agent_id': agent_id, 'rbac': rbac}
 
     dapi = DistributedAPI(f=syscheck.run,
                           f_kwargs=remove_nones_to_dict(f_kwargs),
@@ -101,12 +105,13 @@ def get_syscheck_agent(agent_id, pretty=False, wait_for_complete=False, offset=0
     type_ = connexion.request.args.get('type', None)
     hash_ = connexion.request.args.get('hash', None)
     file_ = connexion.request.args.get('file', None)
+    rbac = get_permissions(connexion.request.headers['Authorization'])
 
     filters = {'type': type_, 'md5': md5, 'sha1': sha1, 'sha256': sha256, 'hash': hash_, 'file': file_}
 
     f_kwargs = {'agent_id': agent_id, 'offset': offset, 'limit': limit, 'select': select,
                 'sort': parse_api_param(sort, 'sort'), 'search': parse_api_param(search, 'search'), 'summary': summary,
-                'filters': filters, 'auth': connexion.request.headers['Authorization']}
+                'filters': filters, 'rbac': rbac}
 
     dapi = DistributedAPI(f=syscheck.files,
                           f_kwargs=remove_nones_to_dict(f_kwargs),
@@ -133,7 +138,8 @@ def delete_syscheck_agent(agent_id, pretty=False, wait_for_complete=False):
     :param agent_id: Agent ID
     :type agent_id: str
     """
-    f_kwargs = {'agent_id': agent_id, 'auth': connexion.request.headers['Authorization']}
+    rbac = get_permissions(connexion.request.headers['Authorization'])
+    f_kwargs = {'agent_id': agent_id, 'rbac': rbac}
 
     dapi = DistributedAPI(f=syscheck.clear,
                           f_kwargs=remove_nones_to_dict(f_kwargs),
@@ -159,7 +165,8 @@ def get_last_scan_agent(agent_id, pretty=False, wait_for_complete=False):
     :param agent_id: Agent ID
     :type agent_id: str
     """
-    f_kwargs = {'agent_id': agent_id, 'auth': connexion.request.headers['Authorization']}
+    rbac = get_permissions(connexion.request.headers['Authorization'])
+    f_kwargs = {'agent_id': agent_id, 'rbac': rbac}
 
     dapi = DistributedAPI(f=syscheck.last_scan,
                           f_kwargs=remove_nones_to_dict(f_kwargs),
