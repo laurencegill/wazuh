@@ -167,7 +167,6 @@ def files(agent_id=None, summary=False, offset=0, limit=common.database_limit, s
     """
     Return a list of files from the database that match the filters
 
-    DEMETRIO ME AYUDA
     :param agent_id: Agent ID.
     :param filters: Fields to filter by
     :param summary: Returns a summary grouping by filename.
