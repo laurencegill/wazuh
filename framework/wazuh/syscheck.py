@@ -52,7 +52,6 @@ def run_all():
 
     :return: Message.
     """
-
     # Run scan in agent 000
     _run_local()
 
@@ -71,7 +70,6 @@ def _run_local():
     :return: Message.
     """
     SYSCHECK_RESTART = "{0}/var/run/.syscheck_run".format(common.ossec_path)
-
     fp = open(SYSCHECK_RESTART, 'w')
     fp.write('{0}\n'.format(SYSCHECK_RESTART))
     fp.close()
@@ -99,28 +97,29 @@ def clear_all():
     :return: Message.
     """
     agents = map(itemgetter('id'), Agent.get_agents_overview(select=['id'])['items'])
-
-    for agent in agents:
-        _clear(agent)
+    for agent_id in agents:
+        _clear(agent_id)
 
     return "Syscheck databases deleted"
 
 
-def _clear(agent):
+def _clear(agent_id):
     """
     Clears the syscheck database of an agent.
 
+    :param agent_id: Agent ID.
     :return: Message.
     """
-    Agent(agent).get_basic_information()  # check if the agent exists
+    # Check if the agent exists
+    Agent(agent_id).get_basic_information()
 
     wdb_conn = WazuhDBConnection()
-    wdb_conn.execute("agent {} sql delete from fim_entry".format(agent), delete=True)
-    # update key fields which contains keys to value 000
+    wdb_conn.execute("agent {} sql delete from fim_entry".format(agent_id), delete=True)
+    # Update key fields which contains keys to value 000
     wdb_conn.execute("agent {} sql update metadata set value = '000' where key like 'fim_db%'"
-                     .format(agent), update=True)
+                     .format(agent_id), update=True)
     wdb_conn.execute("agent {} sql update metadata set value = '000' where key = 'syscheck-db-completed'"
-                     .format(agent), update=True)
+                     .format(agent_id), update=True)
 
     return "Syscheck database deleted"
 
@@ -134,22 +133,20 @@ def last_scan(agent_id=None):
     :return: Dictionary: end, start.
     """
     my_agent = Agent(agent_id)
-    # if agent status is never connected, a KeyError happens
     try:
         agent_version = my_agent.get_basic_information(select=['version'])['version']
     except KeyError:
-        # if the agent is never connected, it won't have either version (key error) or last scan information.
+        # If the agent is never connected, it won't have either version (key error) or last scan information.
         return {'start': None, 'end': None}
 
     if agent_version < 'Wazuh v3.7.0':
         db_agent = glob('{0}/{1}-*.db'.format(common.database_path_agents, agent_id))
         if not db_agent:
-            raise WazuhInternalError(1600,
-                                     extra_message=agent_id)
+            raise WazuhInternalError(1600, extra_message=agent_id)
         else:
             db_agent = db_agent[0]
         conn = Connection(db_agent)
-        # end time
+        # Find scan end time
         query = "SELECT date_last, log FROM pm_event WHERE log LIKE '% syscheck scan.'"
         conn.execute(query)
 
@@ -160,7 +157,7 @@ def last_scan(agent_id=None):
         end = None if not fim_scan_info['end_scan'] else datetime.fromtimestamp(float(fim_scan_info['end_scan']))
         start = None if not fim_scan_info['start_scan'] else datetime.fromtimestamp(float(fim_scan_info['start_scan']))
 
-        # if start is None or the scan is running, end is None
+        # If start is None or the scan is running, end is None
         return {'start': start, 'end': None if start is None or start > end else end}
 
 
@@ -170,6 +167,7 @@ def files(agent_id=None, summary=False, offset=0, limit=common.database_limit, s
     """
     Return a list of files from the database that match the filters
 
+    DEMETRIO ME AYUDA
     :param agent_id: Agent ID.
     :param filters: Fields to filter by
     :param summary: Returns a summary grouping by filename.
@@ -187,8 +185,7 @@ def files(agent_id=None, summary=False, offset=0, limit=common.database_limit, s
     if sort is not None:
         for element in sort['fields']:
             if element not in parameters:
-                raise WazuhError(1403,
-                                 extra_message=', '.join(set(sort['fields']) - parameters),
+                raise WazuhError(1403, extra_message=', '.join(set(sort['fields']) - parameters),
                                  extra_remediation="Allowed fields are: {0}".format(', '.join(parameters)))
 
     if select is None:
@@ -196,8 +193,7 @@ def files(agent_id=None, summary=False, offset=0, limit=common.database_limit, s
     else:
         select = set(select)
         if not select.issubset(parameters):
-            raise WazuhError(1724,
-                             extra_message=', '.join(select - parameters),
+            raise WazuhError(1724, extra_message=', '.join(select - parameters),
                              extra_remediation="Allowed fields are: {0}".format(', '.join(parameters)))
 
     if 'hash' in filters:
@@ -211,8 +207,8 @@ def files(agent_id=None, summary=False, offset=0, limit=common.database_limit, s
                                                                   filters=filters, count=True, or_filters=or_filters)
     for date_field in select & {'mtime', 'date'}:
         for item in items:
-            # date fields with value 0 are returned as ND
-            item[date_field] = "ND" if item[date_field] == 0 \
+            # Date fields with value 0 are returned as None
+            item[date_field] = None if item[date_field] == 0 \
                                     else datetime.fromtimestamp(float(item[date_field]))
 
     return {'totalItems': total_items, 'items': items}
