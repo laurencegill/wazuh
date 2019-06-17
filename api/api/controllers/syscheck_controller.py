@@ -36,7 +36,7 @@ def put_syscheck(pretty=False, wait_for_complete=False):
                           is_async=False,
                           wait_for_complete=wait_for_complete,
                           pretty=pretty,
-                          logger=logger,
+                          logger=logger
                           )
     data = raise_if_exc(loop.run_until_complete(dapi.distribute_function()))
 
