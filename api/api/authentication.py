@@ -155,15 +155,10 @@ def generate_token(user_id):
     # Dummy rbac_policies for testing
     rbac_policies = [
         {
-            "actions": ["syscheck:put", "syscheck:get"],
+            "actions": ["syscheck:put", "syscheck:get", "syscheck:delete"],
             "resources": ["agent:id:*"],
             "effect": "allow"
         },
-        {
-            "actions": ["syscheck:delete"],
-            "resources": ["agent:group:manolo"],
-            "effect": "allow"
-        }
     ]
     timestamp = int(time())
     payload = {
