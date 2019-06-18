@@ -34,8 +34,7 @@ def run(agent_id=None):
         else:
             agent_status = "N/A"
         if agent_status.lower() != 'active':
-            raise WazuhInternalError(1601,
-                                     extra_message='{0} - {1}'.format(agent_id, agent_status))
+            raise WazuhInternalError(1601, extra_message='{0} - {1}'.format(agent_id, agent_status))
 
         # Run scan in agent
         oq = OssecQueue(common.ARQUEUE)
