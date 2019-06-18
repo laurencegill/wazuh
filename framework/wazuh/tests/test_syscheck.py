@@ -10,14 +10,15 @@ import pytest
 import wazuh.syscheck as syscheck
 from wazuh.exception import WazuhInternalError, WazuhError
 
+# MOCK DATA
 mocked_rbac = [True, []]
 mocked_status = [{'status': 'active'}, {}, {'status': 'random'}]
 mocked_restart_message = "Restarting Syscheck/Rootcheck"
 mocked_delete_message = "Syscheck database deleted"
 mocked_agent_ids = {'items': [{'id': '001'}, {'id': '002'}, {'id': '003'}], 'totalItems': '3'}
 mocked_version = [{'version': 'Wazuh v3.6.0'}, {'version': 'Wazuh v3.8.0'}]
-mocked_conn_query_results = [('2019-06-14 07:58:10', 'Starting syscheck scan.'),
-                             ('2019-06-14 07:58:30', 'Ending syscheck scan.')]
+mocked_conn_query_results = [('2019-06-14T07:58:10Z', 'Starting syscheck scan.'),
+                             ('2019-06-14T07:58:30Z', 'Ending syscheck scan.')]
 mocked_last_scan_res = [[{'start_scan': None,
                           'end_scan': None}],
                         [{'start_scan': 1559134512,
