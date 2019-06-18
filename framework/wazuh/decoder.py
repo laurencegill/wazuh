@@ -1,22 +1,23 @@
+
+
 # Copyright (C) 2015-2019, Wazuh Inc.
 # Created by Wazuh, Inc. <info@wazuh.com>.
 # This program is a free software; you can redistribute it and/or modify it under the terms of GPLv2
+
 import os
-import re
 from glob import glob
-from xml.etree.ElementTree import fromstring
+
 import wazuh.configuration as configuration
-from wazuh.exception import WazuhException, WazuhInternalError, WazuhError
 from wazuh import common
+from wazuh.exception import WazuhInternalError, WazuhError
+from wazuh.rbac import matches_privileges
 from wazuh.utils import cut_array, sort_array, search_array, load_wazuh_xml
-from sys import version_info
 
 
 class Decoder:
     """
     Decoder object.
     """
-
     S_ENABLED = 'enabled'
     S_DISABLED = 'disabled'
     S_ALL = 'all'
@@ -34,7 +35,8 @@ class Decoder:
         return str(self.to_dict())
 
     def to_dict(self):
-        dictionary = {'file': self.file, 'path': self.path, 'name': self.name, 'position': self.position, 'status': self.status, 'details': self.details}
+        dictionary = {'file': self.file, 'path': self.path, 'name': self.name, 'position': self.position,
+                      'status': self.status, 'details': self.details}
         return dictionary
 
     def add_detail(self, detail, value):
@@ -54,7 +56,7 @@ class Decoder:
             self.details[detail] = value
 
     @staticmethod
-    def __check_status(status):
+    def _check_status(status):
         if status is None:
             return Decoder.S_ALL
         elif status in [Decoder.S_ALL, Decoder.S_ENABLED, Decoder.S_DISABLED]:
@@ -63,7 +65,7 @@ class Decoder:
             raise WazuhError(1202)
 
     @staticmethod
-    def get_decoders_files(status=None, path=None, file=None, offset=0, limit=common.database_limit, sort=None, search=None):
+    def _get_files(status=None, path=None, file=None, offset=0, limit=common.database_limit, sort=None, search=None):
         """
         Gets a list of the available decoder files.
 
@@ -77,7 +79,7 @@ class Decoder:
         :return: Dictionary: {'items': array of items, 'totalItems': Number of items (without applying the limit)}
         """
 
-        status = Decoder.__check_status(status)
+        status = Decoder._check_status(status)
 
         ruleset_conf = configuration.get_ossec_conf(section='ruleset')
         if not ruleset_conf:
@@ -147,7 +149,8 @@ class Decoder:
         return {'items': cut_array(data, offset, limit), 'totalItems': len(data)}
 
     @staticmethod
-    def get_decoders(status=None, path=None, file=None, name=None, parents=False, offset=0, limit=common.database_limit, sort=None, search=None):
+    def _get_decoders(status=None, path=None, file=None, name=None, parents=False, offset=0,
+                      limit=common.database_limit, sort=None, search=None):
         """
         Gets a list of available decoders.
 
@@ -162,11 +165,12 @@ class Decoder:
         :param search: Looks for items with the specified string.
         :return: Dictionary: {'items': array of items, 'totalItems': Number of items (without applying the limit)}
         """
-        status = Decoder.__check_status(status)
+        status = Decoder._check_status(status)
         all_decoders = []
 
-        for decoder_file in Decoder.get_decoders_files(status=status, limit=None)['items']:
-            all_decoders.extend(Decoder.__load_decoders_from_file(decoder_file['file'], decoder_file['path'], decoder_file['status']))
+        for decoder_file in Decoder._get_files(status=status, limit=None)['items']:
+            all_decoders.extend(Decoder._load_decoders_from_file(decoder_file['file'], decoder_file['path'],
+                                                                  decoder_file['status']))
 
         decoders = list(all_decoders)
         for d in all_decoders:
@@ -194,7 +198,15 @@ class Decoder:
         return {'items': cut_array(decoders, offset, limit), 'totalItems': len(decoders)}
 
     @staticmethod
-    def __load_decoders_from_file(decoder_file, decoder_path, decoder_status):
+    def _load_decoders_from_file(decoder_file, decoder_path, decoder_status):
+        """
+        Loads decoders from specified decoder file
+
+        :param decoder_file: File name to load content from
+        :param decoder_path: File path to load content from
+        :param decoder_status: Decoder status
+        :return: List: Decoders content
+        """
         try:
             decoders = []
             position = 0
@@ -228,6 +240,7 @@ class Decoder:
         return decoders
 
     @staticmethod
+    @matches_privileges(actions=['decoder:get'], resources='decoder:file:{file}')
     def get_file(file=None):
         """
         Reads content of specified file
@@ -236,7 +249,7 @@ class Decoder:
         :return: File contents
         """
 
-        data = Decoder.get_decoders_files(file=file)
+        data = Decoder._get_files(file=file)
         decoders = data['items']
 
         if len(decoders) > 0:
@@ -252,3 +265,36 @@ class Decoder:
                 raise WazuhInternalError(1501, extra_message=os.path.join('WAZUH_HOME', decoder_path, file))
         else:
             raise WazuhError(1503)
+
+    @staticmethod
+    @matches_privileges(actions=['decoder:get'], resources='decoder:file:*')
+    def get_decoders_files(**kwargs):
+        """
+        Gets a list of the available decoder files.
+
+        :param kwargs: Filters and formatters.
+        :return: Dictionary: {'items': array of items, 'totalItems': Number of items (without applying the limit)}
+        """
+        return Decoder._get_files(**kwargs)
+
+    @staticmethod
+    @matches_privileges(actions=['decoder:get'], resources='decoder:name:{name}')
+    def get_decoders_name(**kwargs):
+        """
+        Gets a list of available decoders with specified name
+
+        :param kwargs: Filters and formatters.
+        :return: Dictionary: {'items': array of items, 'totalItems': Number of items (without applying the limit)}
+        """
+        return Decoder._get_decoders(**kwargs)
+
+    @staticmethod
+    @matches_privileges(actions=['decoder:get'], resources='decoder:name:*')
+    def get_decoders_all(**kwargs):
+        """
+        Gets a list of all available decoders.
+
+        :param kwargs: Filters and formatters.
+        :return: Dictionary: {'items': array of items, 'totalItems': Number of items (without applying the limit)}
+        """
+        return Decoder._get_decoders(**kwargs)
