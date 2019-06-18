@@ -48,7 +48,7 @@ def get_required_permissions(actions: list = None, resources: str = None, **kwar
                 res_list.append("{0}{1}".format(res_base, params))
         # KeyError occurs if required dynamic resources can't be found within request parameters
         except KeyError as e:
-            raise WazuhError(4000, extra_message=str(e))
+            raise WazuhInternalError(4001, extra_message=str(e))
     # If we don't find a regex match we obtain the static resource/s
     else:
         res_list.append(resources)
@@ -62,7 +62,6 @@ def get_required_permissions(actions: list = None, resources: str = None, **kwar
 
 
 def match_permissions(req_permissions: dict = None, rbac: list = None):
-
     mode = rbac[0]
     user_permissions = rbac[1]
     # We run through all required permissions for the request
@@ -76,7 +75,7 @@ def match_permissions(req_permissions: dict = None, rbac: list = None):
                 action_match = req_action in policy['actions']
                 if action_match:
                     # We find resource name to add * if not already there
-                    m = re.search(r'^(\w+\:\w+:)(\w+|\*)$', req_resource)
+                    m = re.search(r'^(\w+\:\w+:)([\w\-\.]+|\*)$', req_resource)
                     res_match = False
                     # We find if resource matches
                     if m.group(1) == 'agent:id:':
@@ -109,8 +108,7 @@ def matches_privileges(actions: list = None, resources: str = None):
         @wraps(func)
         def wrapper(*args, **kwargs):
             req_permissions = get_required_permissions(actions=actions, resources=resources, **kwargs)
-            allow = match_permissions(req_permissions=req_permissions,
-                                      rbac=kwargs['rbac'])
+            allow = match_permissions(req_permissions=req_permissions, rbac=kwargs['rbac'])
             if allow:
                 del kwargs['rbac']
                 return func(*args, **kwargs)
