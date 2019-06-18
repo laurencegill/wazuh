@@ -216,7 +216,7 @@ functions = {
 
     # Decoders
     '/decoders': {
-        'function': Decoder.get_decoders,
+        'function': Decoder.get_decoders_all,
         'type': 'local_any',
         'is_async': False
     },
