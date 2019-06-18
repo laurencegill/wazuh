@@ -5,8 +5,9 @@
 import asyncio
 import logging
 
-from connexion.lifecycle import ConnexionResponse
+import connexion
 
+from api.authentication import get_permissions
 from api.models.base_model_ import Data
 from api.util import remove_nones_to_dict, exception_handler, parse_api_param, raise_if_exc
 from wazuh.cluster.dapi.dapi import DistributedAPI
@@ -18,8 +19,7 @@ logger = logging.getLogger('wazuh')
 
 @exception_handler
 def get_decoders(pretty: bool = False, wait_for_complete: bool = False, offset: int = 0, limit: int = None,
-                 sort: str = None, search: str = None, file: str = None, path: str = None,
-                 status: str = None):
+                 sort: str = None, search: str = None, file: str = None, path: str = None, status: str = None):
     """Get all decoders
 
     Returns information about all decoders included in ossec.conf. This information include decoder's route,
@@ -36,10 +36,11 @@ def get_decoders(pretty: bool = False, wait_for_complete: bool = False, offset: 
     :param path: Filters by path
     :param status: Filters by list status.
     """
-    f_kwargs = {'offset': offset, 'limit': limit, 'sort': parse_api_param(sort, 'sort'),
+    rbac = get_permissions(connexion.request.headers['Authorization'])
+    f_kwargs = {'rbac': rbac, 'offset': offset, 'limit': limit, 'sort': parse_api_param(sort, 'sort'),
                 'search': parse_api_param(search, 'search'), 'status': status, 'file': file, 'path': path}
 
-    dapi = DistributedAPI(f=Decoder.get_decoders,
+    dapi = DistributedAPI(f=Decoder.get_decoders_all,
                           f_kwargs=remove_nones_to_dict(f_kwargs),
                           request_type='local_any',
                           is_async=False,
@@ -70,10 +71,11 @@ def get_decoders_by_name(pretty: bool = False, wait_for_complete: bool = False, 
     :param search: Looks for elements with the specified string
     :param decoder_name: Decoder name.
     """
-    f_kwargs = {'offset': offset, 'limit': limit, 'sort': parse_api_param(sort, 'sort'),
+    rbac = get_permissions(connexion.request.headers['Authorization'])
+    f_kwargs = {'rbac': rbac, 'offset': offset, 'limit': limit, 'sort': parse_api_param(sort, 'sort'),
                 'search': parse_api_param(search, 'search'), 'name': decoder_name}
 
-    dapi = DistributedAPI(f=Decoder.get_decoders,
+    dapi = DistributedAPI(f=Decoder.get_decoders_name,
                           f_kwargs=remove_nones_to_dict(f_kwargs),
                           request_type='local_any',
                           is_async=False,
@@ -107,7 +109,8 @@ def get_decoders_files(pretty: bool = False, wait_for_complete: bool = False, of
     :param path: Filters by path
     :param status: Filters by list status.
     """
-    f_kwargs = {'offset': offset, 'limit': limit, 'sort': parse_api_param(sort, 'sort'),
+    rbac = get_permissions(connexion.request.headers['Authorization'])
+    f_kwargs = {'rbac': rbac, 'offset': offset, 'limit': limit, 'sort': parse_api_param(sort, 'sort'),
                 'search': parse_api_param(search, 'search'), 'file': file, 'path': path, 'status': status}
 
     dapi = DistributedAPI(f=Decoder.get_decoders_files,
@@ -135,7 +138,8 @@ def get_download_file(pretty: bool = False, wait_for_complete: bool = False, fil
     :param file: File name to download.
     :return:
     """
-    f_kwargs = {'file': file}
+    rbac = get_permissions(connexion.request.headers['Authorization'])
+    f_kwargs = {'rbac': rbac, 'file': file}
 
     dapi = DistributedAPI(f=Decoder.get_file,
                           f_kwargs=remove_nones_to_dict(f_kwargs),
@@ -146,7 +150,7 @@ def get_download_file(pretty: bool = False, wait_for_complete: bool = False, fil
                           logger=logger
                           )
     data = raise_if_exc(loop.run_until_complete(dapi.distribute_function()))
-    response = ConnexionResponse(body=data["message"], mimetype='application/xml')
+    response = connexion.lifecycle.ConnexionResponse(body=data["message"], mimetype='application/xml')
     return response
 
 
@@ -165,10 +169,11 @@ def get_decoders_parents(pretty: bool = False, wait_for_complete: bool = False, 
                  ascending or descending order.
     :param search: Looks for elements with the specified string
     """
-    f_kwargs = {'offset': offset, 'limit': limit, 'sort': parse_api_param(sort, 'sort'),
+    rbac = get_permissions(connexion.request.headers['Authorization'])
+    f_kwargs = {'rbac': rbac, 'offset': offset, 'limit': limit, 'sort': parse_api_param(sort, 'sort'),
                 'search': parse_api_param(search, 'search'), 'parents': True}
 
-    dapi = DistributedAPI(f=Decoder.get_decoders,
+    dapi = DistributedAPI(f=Decoder.get_decoders_all,
                           f_kwargs=remove_nones_to_dict(f_kwargs),
                           request_type='local_any',
                           is_async=False,
