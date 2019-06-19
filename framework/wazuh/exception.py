@@ -75,6 +75,7 @@ class WazuhException(Exception):
         1116: "Requested component configuration does not exist",
         1117: "Unable to connect with component. The component might be disabled.",
         1118: "Could not request component configuration",
+        1119: "Directory '/tmp' needs read, write & execution permission for 'ossec' user",
 
         # Rule: 1200 - 1299
         1200: {'message': 'Error reading rules from `WAZUH_HOME/etc/ossec.conf`',
@@ -94,8 +95,8 @@ class WazuhException(Exception):
         1204: {'message': 'Operation not implemented',
                'remediation': 'Please contact us: [official repository]https://github.com/wazuh/wazuh/issues'
                },
-        1205: {'message': 'Requirement not valid. Valid ones are pci and gdpr',
-               'remediation': 'Please indicate one of the following values: pci or gdpr'
+        1205: {'message': 'Requirement not valid. Valid ones are pci, gdpr, gpg13, hipaa and nist-800-53',
+               'remediation': 'Please indicate one of the following values: pci, gdpr, gpg13, hipaa or nist-800-53'
                },
         1206: {'message': 'Duplicated rule ID',
                'remediation': 'Please check your configuration, two or more rules have the same ID, visit [official documentation]https://documentation.wazuh.com/3.x/user-manual/ruleset/custom.html'
