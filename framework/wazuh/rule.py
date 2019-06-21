@@ -1,15 +1,13 @@
 # Copyright (C) 2015-2019, Wazuh Inc.
 # Created by Wazuh, Inc. <info@wazuh.com>.
 # This program is a free software; you can redistribute it and/or modify it under the terms of GPLv2
-import re
+
 from glob import glob
-from xml.etree.ElementTree import fromstring
 import wazuh.configuration as configuration
 from wazuh.exception import WazuhException, WazuhInternalError, WazuhError
 from wazuh import common
 from wazuh.utils import cut_array, sort_array, search_array, load_wazuh_xml
 import os
-from sys import version_info
 
 
 class Rule:
@@ -68,7 +66,6 @@ class Rule:
         return {'file': self.file, 'path': self.path, 'id': self.id, 'description': self.description,
                 'level': self.level, 'status': self.status, 'groups': self.groups, 'pci': self.pci, 'gdpr': self.gdpr,
                 'hipaa': self.hipaa, 'nist-800-53': self.nist_800_53, 'gpg13': self.gpg13, 'details': self.details}
-
 
     def set_group(self, group):
         """
@@ -157,7 +154,8 @@ class Rule:
             raise WazuhError(1202)
 
     @staticmethod
-    def get_rules_files(status=None, path=None, file=None, offset=0, limit=common.database_limit, sort=None, search=None):
+    def get_rules_files(status=None, path=None, file=None, offset=0,
+                        limit=common.database_limit, sort=None, search=None):
         """
         Gets a list of the rule files.
 
@@ -170,7 +168,6 @@ class Rule:
         :param search: Looks for items with the specified string.
         :return: Dictionary: {'items': array of items, 'totalItems': Number of items (without applying the limit)}
         """
-        data = []
         status = Rule.__check_status(status)
 
         # Rules configuration
@@ -266,7 +263,7 @@ class Rule:
         :return: Dictionary: {'items': array of items, 'totalItems': Number of items (without applying the limit)}
         """
         all_rules = []
-
+        levels = None
         if level:
             levels = level.split('-')
             if len(levels) < 0 or len(levels) > 2:
