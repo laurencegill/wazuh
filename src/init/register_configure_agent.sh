@@ -178,7 +178,7 @@ main () {
         OPTIONS=$(add_parameter "${OPTIONS}" "-v" "${WAZUH_CERTIFICATE}")
         OPTIONS=$(add_parameter "${OPTIONS}" "-k" "${WAZUH_KEY}")
         OPTIONS=$(add_parameter "${OPTIONS}" "-x" "${WAZUH_PEM}")
-        ${DIRECTORY}/bin/agent-auth ${OPTIONS} >> ${DIRECTORY}/logs/ossec.log 2>/dev/null
+        ${DIRECTORY}/bin/agent-auth ${OPTIONS} -ddd >> ${DIRECTORY}/logs/ossec.log
     fi
 
     unset_vars ${uname_s}
